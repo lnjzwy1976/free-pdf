@@ -1,98 +1,78 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import React, { useEffect, useCallback } from 'react';
+import { StyleSheet, View, Alert } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
+import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import { ScreenContainer } from '@/components/common/ScreenContainer';
+import { PdfListItem } from '@/components/pdf-library/PdfListItem';
+import { EmptyState } from '@/components/common/EmptyState';
+import { useFileStore } from '@/store/use-file-store';
+import { PdfFile, FileManager } from '@/services/file-system/file-manager';
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  const router = useRouter();
+  const { files, refreshFiles } = useFileStore();
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+  useFocusEffect(
+    useCallback(() => {
+      refreshFiles();
+    }, [refreshFiles])
+  );
+
+  const handlePress = useCallback((file: PdfFile) => {
+    router.push(`/reader/${encodeURIComponent(file.uri)}`);
+  }, [router]);
+
+  const handleDelete = useCallback((file: PdfFile) => {
+    Alert.alert(
+      '确认删除',
+      `您确定要删除文件 "${file.name}" 吗？此操作不可撤销。`,
+      [
+        {
+          text: '取消',
+          style: 'cancel',
+        },
+        {
+          text: '删除',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const success = await FileManager.deleteFile(file.uri);
+              if (success) {
+                console.log(`[File Manager] 文件 ${file.name} 删除成功`);
+                refreshFiles(); // 删除成功后刷新列表
+              } else {
+                Alert.alert('删除失败', '文件删除失败，请稍后重试。');
+              }
+            } catch (error) {
+              console.error('[File Manager] 删除文件时出错:', error);
+              Alert.alert('删除出错', '删除文件时发生错误，请检查权限或稍后重试。');
+            }
+          },
+        },
+      ],
+      { cancelable: true }
+    );
+  }, [refreshFiles]);
+
+  return (
+    <ScreenContainer>
+      <FlashList
+        data={files}
+        renderItem={({ item }) => (
+          <PdfListItem file={item} onPress={handlePress} onDelete={handleDelete} />
+        )}
+        estimatedItemSize={80}
+        ListEmptyComponent={<EmptyState />}
+        contentContainerStyle={styles.listContent}
+      />
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  listContent: {
+    paddingBottom: 100, // 底部留白
   },
 });

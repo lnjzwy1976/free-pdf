@@ -18,6 +18,16 @@ const MAPPING = {
   'paperplane.fill': 'send',
   'chevron.left.forwardslash.chevron.right': 'code',
   'chevron.right': 'chevron-right',
+  'arrow.down.doc.fill': 'file-download',
+  'gear': 'settings',
+  'folder.fill': 'folder',
+  'wifi': 'wifi',
+  'link': 'link',
+  'chevron.left': 'chevron-left',
+  'bookmark.fill': 'bookmark',
+  'plus': 'add',
+  'trash': 'delete',
+  'arrow.left': 'arrow-back',
 } as IconMapping;
 
 /**

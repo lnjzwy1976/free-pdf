@@ -1,0 +1,32 @@
+# Expo 自动生成的 Podfile 会包含基础配置
+# 此文件用于添加自定义依赖
+
+# 注意：当您在 macOS 上首次运行 `npx expo run:ios` 时，
+# Expo 会生成完整的 Podfile。您需要将以下内容合并到生成的 Podfile 中。
+
+# ================== 需要添加到 Podfile 的内容 ==================
+
+# 在 target 'freepdf' do 块内添加：
+#
+#   # 局域网传输 HTTP 服务器
+#   pod 'GCDWebServer', '~> 3.0'
+#
+# 完整示例：
+#
+# target 'freepdf' do
+#   use_expo_modules!
+#   config = use_native_modules!
+#   
+#   # 自定义依赖
+#   pod 'GCDWebServer', '~> 3.0'
+#   
+#   # ... 其他 Expo 自动配置
+# end
+
+# ================== 安装步骤 ==================
+# 1. 在 macOS 上运行 `npx expo run:ios` 生成完整的 ios 目录
+# 2. 编辑生成的 ios/Podfile，添加上述 GCDWebServer 依赖
+# 3. 运行 `cd ios && pod install`
+# 4. 在 Xcode 中打开 .xcworkspace 文件
+# 5. 确保 Build Settings 中设置了正确的 Bridging Header 路径：
+#    $(PROJECT_DIR)/freepdf/freepdf-Bridging-Header.h

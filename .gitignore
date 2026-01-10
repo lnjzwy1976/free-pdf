@@ -39,5 +39,5 @@ yarn-error.*
 app-example
 
 # generated native folders
-/ios
-/android
+# /ios  # 已注释：需要追踪 iOS 原生模块代码
+

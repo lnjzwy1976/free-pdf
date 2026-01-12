@@ -5,7 +5,7 @@ import { useServerStore } from '@/store/use-server-store';
 import { moderateScale, scale, verticalScale } from '@/utils/responsive';
 import { ProgressBar } from '@react-native-community/progress-bar-android';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Modal, Platform, StyleSheet, TouchableOpacity, View, Animated } from 'react-native';
+import { ActivityIndicator, Animated, Modal, Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 
 interface ServerModalProps {
@@ -36,7 +36,7 @@ export function ServerModal({ visible, onClose, refreshFiles }: ServerModalProps
         duration: 300, // 仅做 UI 层的平滑过渡，不造假
         useNativeDriver: false,
     }).start();
-  }, [uploadProgress]);
+  }, [uploadProgress, animatedProgress]);
 
   const startServer = useCallback(async () => {
     setLoading(true);
@@ -56,7 +56,7 @@ export function ServerModal({ visible, onClose, refreshFiles }: ServerModalProps
     HttpServer.stop();
     resetUploadStatus();
     animatedProgress.setValue(0);
-  }, [resetUploadStatus]);
+  }, [resetUploadStatus, animatedProgress]);
 
   useEffect(() => {
     if (visible) {

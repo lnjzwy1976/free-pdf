@@ -5,7 +5,16 @@ import { FileManager } from '../file-system/file-manager';
 import { NetworkInfo } from './network-info';
 
 const { LanTransferModule } = NativeModules;
-const eventEmitter = LanTransferModule ? new NativeEventEmitter(LanTransferModule) : DeviceEventEmitter;
+/**
+ * 说明（重要）：
+ * - iOS：推荐用 NativeEventEmitter(LanTransferModule) 来接收原生模块事件
+ * - Android：事件本质走 DeviceEventEmitter（RCTDeviceEventEmitter），不需要也不推荐把 NativeModule 传给 NativeEventEmitter
+ * - 目的：避免 RN 对 addListener/removeListeners 的校验警告，同时保持 iOS 的事件订阅方式更规范
+ */
+const eventEmitter =
+  Platform.OS === 'ios' && LanTransferModule
+    ? new NativeEventEmitter(LanTransferModule)
+    : DeviceEventEmitter;
 
 // 浏览器端上传页面 HTML
 const INDEX_HTML = `
@@ -103,6 +112,12 @@ const INDEX_HTML = `
 class LocalHttpServer {
   port = 0;
   isRunning = false;
+  /**
+   * 说明：用于“方案2”的 UI 自动隐藏计时器
+   * - 目的：导入完成/失败后延迟隐藏进度条
+   * - 必须在新上传开始/停止服务时清理，避免旧计时器误清掉新状态
+   */
+  private uploadStatusResetTimer: ReturnType<typeof setTimeout> | null = null;
 
   /**
    * 启动服务器
@@ -150,6 +165,13 @@ class LocalHttpServer {
     // 上传开始
     eventEmitter.addListener('onUploadStart', (e) => {
       console.log('[Native] Upload Start:', e);
+
+      // 说明：一旦新上传开始，清理上一次“自动隐藏”计时器，避免误清理当前上传状态
+      if (this.uploadStatusResetTimer) {
+        clearTimeout(this.uploadStatusResetTimer);
+        this.uploadStatusResetTimer = null;
+      }
+
       useServerStore.getState().setUploadProgress({
         isUploading: true,
         fileName: e.fileName,
@@ -190,8 +212,48 @@ class LocalHttpServer {
       try {
         await FileManager.importFile(e.filePath, decodeURIComponent(e.fileName));
         useFileStore.getState().refreshFiles();
+
+        // 方案2：导入成功 -> 显示“导入完成”短暂提示，再自动隐藏
+        useServerStore.getState().setUploadProgress({
+          isUploading: false,
+          fileName: e.fileName,
+          progress: 100,
+          totalSize: 0,
+          receivedSize: 0,
+          statusText: '导入完成',
+        });
+
+        // 清理旧计时器并重新设置
+        if (this.uploadStatusResetTimer) {
+          clearTimeout(this.uploadStatusResetTimer);
+        }
+        this.uploadStatusResetTimer = setTimeout(() => {
+          useServerStore.getState().resetUploadStatus();
+          this.uploadStatusResetTimer = null;
+        }, 800);
       } catch (err) {
         console.error('[Native] Import error:', err);
+
+        // 方案2：导入失败 -> 显示错误一段时间，再自动隐藏（避免 UI 卡死在“正在导入”）
+        const message =
+          err instanceof Error ? err.message : typeof err === 'string' ? err : '未知错误';
+
+        useServerStore.getState().setUploadProgress({
+          isUploading: false,
+          fileName: e.fileName,
+          progress: 100,
+          totalSize: 0,
+          receivedSize: 0,
+          statusText: `导入失败：${message}`,
+        });
+
+        if (this.uploadStatusResetTimer) {
+          clearTimeout(this.uploadStatusResetTimer);
+        }
+        this.uploadStatusResetTimer = setTimeout(() => {
+          useServerStore.getState().resetUploadStatus();
+          this.uploadStatusResetTimer = null;
+        }, 2500);
       }
     });
 
@@ -216,6 +278,13 @@ class LocalHttpServer {
     if (LanTransferModule) {
       LanTransferModule.stop();
     }
+
+    // 说明：停止服务时必须清理计时器，避免后续误触发 reset
+    if (this.uploadStatusResetTimer) {
+      clearTimeout(this.uploadStatusResetTimer);
+      this.uploadStatusResetTimer = null;
+    }
+
     this.isRunning = false;
     this.port = 0;
     useServerStore.getState().setServerStatus({ isRunning: false, ipAddress: null, port: 0 });

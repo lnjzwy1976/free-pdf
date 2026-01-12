@@ -1,9 +1,10 @@
 import { ThemedText } from '@/components/themed-text';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { moderateScale, scale, verticalScale } from '@/utils/responsive';
-import React, { useEffect, useMemo, useRef } from 'react';
-import { Dimensions, PanResponder, StyleSheet, View } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Dimensions, PanResponder, StyleSheet, View, TouchableOpacity, Modal, TextInput, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { IconSymbol } from '@/components/ui/icon-symbol';
 
 interface ReaderFooterProps {
   visible: boolean;
@@ -33,10 +34,17 @@ export function ReaderFooter({ visible, totalPages, currentPage, onSeek }: Reade
   const activeBorderColor = useThemeColor({}, 'tint');
   const textColor = useThemeColor({}, 'textSecondary');
   const activeTextColor = useThemeColor({}, 'tint');
+  const inputBgColor = useThemeColor({}, 'background');
+  const primaryTextColor = useThemeColor({}, 'text');
+  const iconColor = useThemeColor({}, 'icon');
 
   const containerWidth = SCREEN_WIDTH - FOOTER_MARGIN_H * 2;
   const paddingInner = scale(10);
   const availableWidth = containerWidth - paddingInner * 2;
+
+  // Jump Modal State
+  const [modalVisible, setModalVisible] = useState(false);
+  const [inputPage, setInputPage] = useState('');
 
   // 算法逻辑保持不变
   const maxThumbCount = Math.floor((availableWidth + THUMB_GAP) / (THUMB_WIDTH + THUMB_GAP));
@@ -62,6 +70,20 @@ export function ReaderFooter({ visible, totalPages, currentPage, onSeek }: Reade
     totalPagesRef.current = totalPages;
     currentPageRef.current = currentPage;
   }, [totalPages, currentPage]);
+
+  const handleJumpSubmit = () => {
+    const page = parseInt(inputPage, 10);
+    if (isNaN(page)) {
+      setModalVisible(false);
+      return;
+    }
+    
+    // 限制范围
+    const targetPage = Math.max(1, Math.min(page, totalPages));
+    onSeek(targetPage);
+    setModalVisible(false);
+    setInputPage('');
+  };
 
   const panResponder = useRef(
     PanResponder.create({
@@ -102,12 +124,33 @@ export function ReaderFooter({ visible, totalPages, currentPage, onSeek }: Reade
       ]}
       pointerEvents="box-none"
     >
-      {/* 页码指示器 - 独立悬浮 */}
-      <View style={[styles.pageBadge, { backgroundColor: islandColor }]}>
-        <ThemedText style={styles.pageBadgeText}>
-          <ThemedText style={{fontWeight: '700'}}>{currentPage}</ThemedText>
-          <ThemedText style={{color: textColor, fontSize: 13}}> / {totalPages}</ThemedText>
-        </ThemedText>
+      {/* 顶部容器：页码指示器 + 回到顶部按钮 */}
+      <View style={styles.topRow}>
+        {/* 页码指示器 - 独立悬浮 - 可点击 */}
+        <TouchableOpacity 
+          style={[styles.pageBadge, { backgroundColor: islandColor }]}
+          onPress={() => {
+              setInputPage('');
+              setModalVisible(true);
+          }}
+          activeOpacity={0.8}
+        >
+          <ThemedText style={styles.pageBadgeText}>
+            <ThemedText style={{fontWeight: '700'}}>{currentPage}</ThemedText>
+            <ThemedText style={{color: textColor, fontSize: 13}}> / {totalPages}</ThemedText>
+          </ThemedText>
+        </TouchableOpacity>
+
+        {/* 回到顶部按钮 - 仅当不在第一页时显示 */}
+        {currentPage > 1 && (
+          <TouchableOpacity 
+            style={[styles.pageBadge, { backgroundColor: islandColor, marginLeft: scale(8) }]}
+            onPress={() => onSeek(1)}
+            activeOpacity={0.8}
+          >
+            <IconSymbol name="arrow.up" size={moderateScale(16)} color={iconColor} />
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* 缩略图条 - 悬浮岛 */}
@@ -151,6 +194,49 @@ export function ReaderFooter({ visible, totalPages, currentPage, onSeek }: Reade
           })}
         </View>
       </View>
+
+      {/* 跳转输入弹窗 */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <KeyboardAvoidingView 
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={styles.modalOverlay}
+        >
+            <TouchableOpacity 
+                style={styles.modalDismissArea} 
+                activeOpacity={1} 
+                onPress={() => setModalVisible(false)}
+            />
+            
+            <View style={[styles.modalContent, { backgroundColor: islandColor }]}>
+                <ThemedText type="defaultSemiBold" style={styles.modalTitle}>跳转到页码</ThemedText>
+                <TextInput
+                    style={[styles.input, { backgroundColor: inputBgColor, color: primaryTextColor }]}
+                    placeholder={`1 - ${totalPages}`}
+                    placeholderTextColor={textColor}
+                    keyboardType="number-pad"
+                    autoFocus
+                    value={inputPage}
+                    onChangeText={setInputPage}
+                    onSubmitEditing={handleJumpSubmit}
+                    returnKeyType="go"
+                    maxLength={5}
+                />
+                <View style={styles.modalButtons}>
+                    <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.modalBtn}>
+                        <ThemedText style={{ color: textColor }}>取消</ThemedText>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={handleJumpSubmit} style={[styles.modalBtn, styles.modalBtnPrimary]}>
+                        <ThemedText style={{ color: '#fff', fontWeight: 'bold' }}>跳转</ThemedText>
+                    </TouchableOpacity>
+                </View>
+            </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
@@ -163,16 +249,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     zIndex: 100,
   },
+  topRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: verticalScale(12),
+  },
   pageBadge: {
     paddingHorizontal: scale(16),
     paddingVertical: verticalScale(6),
     borderRadius: moderateScale(20),
-    marginBottom: verticalScale(12),
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+    minHeight: verticalScale(32),
   },
   pageBadgeText: {
     fontSize: moderateScale(14),
@@ -203,4 +296,53 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(8),
     fontWeight: '500',
   },
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalDismissArea: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  modalContent: {
+    width: '80%',
+    borderRadius: moderateScale(16),
+    padding: scale(20),
+    alignItems: 'center',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  modalTitle: {
+    marginBottom: verticalScale(16),
+    fontSize: moderateScale(18),
+  },
+  input: {
+    width: '100%',
+    height: verticalScale(44),
+    borderRadius: moderateScale(8),
+    paddingHorizontal: scale(12),
+    fontSize: moderateScale(16),
+    marginBottom: verticalScale(20),
+    textAlign: 'center',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    width: '100%',
+    justifyContent: 'space-between',
+  },
+  modalBtn: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: verticalScale(10),
+  },
+  modalBtnPrimary: {
+    backgroundColor: '#007AFF',
+    borderRadius: moderateScale(8),
+    marginLeft: scale(10),
+  }
 });

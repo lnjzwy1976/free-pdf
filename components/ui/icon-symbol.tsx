@@ -41,6 +41,7 @@ const MAPPING: Record<string, MaterialIconName> = {
   'bookmark': 'bookmark-border',
   'paperplane.fill': 'send',
   'chevron.left.forwardslash.chevron.right': 'code',
+  'arrow.up': 'arrow-upward',
 };
 
 export type IconSymbolName = keyof typeof MAPPING;

@@ -1,18 +1,23 @@
 import React, { useEffect, useCallback } from 'react';
-import { StyleSheet, View, Alert } from 'react-native';
+import { StyleSheet, View, Alert, Platform } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ScreenContainer } from '@/components/common/ScreenContainer';
 import { PdfListItem } from '@/components/pdf-library/PdfListItem';
 import { EmptyState } from '@/components/common/EmptyState';
 import { useFileStore } from '@/store/use-file-store';
 import { PdfFile, FileManager } from '@/services/file-system/file-manager';
+import { ThemedText } from '@/components/themed-text';
+import { useThemeColor } from '@/hooks/use-theme-color';
+import { scale, verticalScale } from '@/utils/responsive';
+import { StatusBar } from 'expo-status-bar';
 
 export default function HomeScreen() {
   const router = useRouter();
   const { files, refreshFiles } = useFileStore();
+  const backgroundColor = useThemeColor({}, 'background');
 
   useFocusEffect(
     useCallback(() => {
@@ -26,13 +31,10 @@ export default function HomeScreen() {
 
   const handleDelete = useCallback((file: PdfFile) => {
     Alert.alert(
-      '确认删除',
-      `您确定要删除文件 "${file.name}" 吗？此操作不可撤销。`,
+      '删除文件',
+      `您确定要删除 "${file.name}" 吗？`,
       [
-        {
-          text: '取消',
-          style: 'cancel',
-        },
+        { text: '取消', style: 'cancel' },
         {
           text: '删除',
           style: 'destructive',
@@ -40,39 +42,60 @@ export default function HomeScreen() {
             try {
               const success = await FileManager.deleteFile(file.uri);
               if (success) {
-                console.log(`[File Manager] 文件 ${file.name} 删除成功`);
-                refreshFiles(); // 删除成功后刷新列表
-              } else {
-                Alert.alert('删除失败', '文件删除失败，请稍后重试。');
+                refreshFiles();
               }
             } catch (error) {
-              console.error('[File Manager] 删除文件时出错:', error);
-              Alert.alert('删除出错', '删除文件时发生错误，请检查权限或稍后重试。');
+              console.error(error);
             }
           },
         },
-      ],
-      { cancelable: true }
+      ]
     );
   }, [refreshFiles]);
 
+  const renderHeader = () => (
+    <View style={styles.headerContainer}>
+      <ThemedText type="largeTitle" style={styles.headerTitle}>书架</ThemedText>
+      <ThemedText type="caption" style={styles.headerSubtitle}>
+        {files.length} 本书
+      </ThemedText>
+    </View>
+  );
+
   return (
-    <ScreenContainer>
+    <SafeAreaView style={[styles.container, { backgroundColor }]} edges={['top']}>
+      <StatusBar style="auto" />
       <FlashList
         data={files}
         renderItem={({ item }) => (
           <PdfListItem file={item} onPress={handlePress} onDelete={handleDelete} />
         )}
-        estimatedItemSize={80}
-        ListEmptyComponent={<EmptyState />}
+        estimatedItemSize={88}
+        ListHeaderComponent={renderHeader}
+        ListEmptyComponent={<EmptyState title="空空如也" description="快去「导入」添加你的第一本书吧" />}
         contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
       />
-    </ScreenContainer>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  headerContainer: {
+    paddingHorizontal: scale(20),
+    paddingTop: verticalScale(20),
+    paddingBottom: verticalScale(10),
+  },
+  headerTitle: {
+    marginBottom: verticalScale(4),
+  },
+  headerSubtitle: {
+    marginBottom: verticalScale(16),
+  },
   listContent: {
-    paddingBottom: 100, // 底部留白
+    paddingBottom: 100,
   },
 });

@@ -4,8 +4,8 @@ import { NetworkInfo } from '@/services/local-server/network-info';
 import { useServerStore } from '@/store/use-server-store';
 import { moderateScale, scale, verticalScale } from '@/utils/responsive';
 import { ProgressBar } from '@react-native-community/progress-bar-android';
-import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Modal, Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Modal, Platform, StyleSheet, TouchableOpacity, View, Animated } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 
 interface ServerModalProps {
@@ -22,6 +22,21 @@ export function ServerModal({ visible, onClose, refreshFiles }: ServerModalProps
   } = useServerStore();
 
   const [loading, setLoading] = useState(false);
+  
+  // 进度条动画值 (0-100)
+  const animatedProgress = useRef(new Animated.Value(0)).current;
+
+  // 监听真实上传进度变化
+  useEffect(() => {
+    // 无论是 Android 还是 iOS，都只响应真实数据
+    // Android: uploadProgress 会平滑变化 (0 -> 100)
+    // iOS: uploadProgress 会在开始时为 0，完成时直接跳变到 100 (受限于当前原生实现)
+    Animated.timing(animatedProgress, {
+        toValue: uploadProgress,
+        duration: 300, // 仅做 UI 层的平滑过渡，不造假
+        useNativeDriver: false,
+    }).start();
+  }, [uploadProgress]);
 
   const startServer = useCallback(async () => {
     setLoading(true);
@@ -40,6 +55,7 @@ export function ServerModal({ visible, onClose, refreshFiles }: ServerModalProps
   const stopServer = useCallback(() => {
     HttpServer.stop();
     resetUploadStatus();
+    animatedProgress.setValue(0);
   }, [resetUploadStatus]);
 
   useEffect(() => {
@@ -58,6 +74,11 @@ export function ServerModal({ visible, onClose, refreshFiles }: ServerModalProps
 
   const url = ipAddress && port > 0 ? `http://${ipAddress}:${port}` : '正在启动服务...';
   const displayUrl = isRunning ? url : '服务已停止';
+
+  const widthInterpolation = animatedProgress.interpolate({
+      inputRange: [0, 100],
+      outputRange: ['0%', '100%']
+  });
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -80,6 +101,7 @@ export function ServerModal({ visible, onClose, refreshFiles }: ServerModalProps
               <ThemedText type="defaultSemiBold" style={styles.uploadFileName} numberOfLines={1}>
                 {uploadFileName}
               </ThemedText>
+              
               {Platform.OS === 'android' ? (
                 <ProgressBar 
                   styleAttr="Horizontal" 
@@ -90,9 +112,15 @@ export function ServerModal({ visible, onClose, refreshFiles }: ServerModalProps
                 />
               ) : (
                 <View style={styles.progressBarBackground}>
-                  <View style={[styles.progressBarFill, { width: `${uploadProgress}%` }]} />
+                  <Animated.View 
+                    style={[
+                        styles.progressBarFill, 
+                        { width: widthInterpolation }
+                    ]} 
+                  />
                 </View>
               )}
+              
               <ThemedText style={styles.uploadProgressText}>{uploadStatusText}</ThemedText>
             </View>
           ) : (
@@ -172,16 +200,16 @@ const styles = StyleSheet.create({
   },
   progressBarBackground: {
     width: '90%',
-    height: verticalScale(8),
-    backgroundColor: '#e0e0e0',
-    borderRadius: moderateScale(4),
+    height: verticalScale(10), // 加高一点
+    backgroundColor: '#E5E5EA', // iOS 风格轨道色
+    borderRadius: moderateScale(5),
     overflow: 'hidden',
     marginBottom: verticalScale(8),
   },
   progressBarFill: {
     height: '100%',
     backgroundColor: '#007AFF',
-    borderRadius: moderateScale(4),
+    borderRadius: moderateScale(5),
   },
   uploadProgressText: {
     fontSize: moderateScale(14),

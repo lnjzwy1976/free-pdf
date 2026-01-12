@@ -1,10 +1,11 @@
 import { useFileStore } from '@/store/use-file-store';
 import { useServerStore } from '@/store/use-server-store';
-import { DeviceEventEmitter, NativeModules, Platform } from 'react-native';
+import { DeviceEventEmitter, NativeEventEmitter, NativeModules, Platform } from 'react-native';
 import { FileManager } from '../file-system/file-manager';
 import { NetworkInfo } from './network-info';
 
 const { LanTransferModule } = NativeModules;
+const eventEmitter = LanTransferModule ? new NativeEventEmitter(LanTransferModule) : DeviceEventEmitter;
 
 // 浏览器端上传页面 HTML
 const INDEX_HTML = `
@@ -114,12 +115,14 @@ class LocalHttpServer {
     if ((Platform.OS === 'android' || Platform.OS === 'ios') && LanTransferModule) {
       console.log('[LocalServer] Starting Native Module...');
 
+      // 1. 先注册监听器，防止漏掉启动瞬间的事件
+      this.registerNativeEventListeners();
+      console.log('[LocalServer] Native event listeners registered');
+
+      // 2. 再启动服务
       const port = await LanTransferModule.start(INDEX_HTML);
       this.port = port;
       this.isRunning = true;
-
-      // 注册原生事件监听器
-      this.registerNativeEventListeners();
 
       const url = `http://${ipAddress}:${port}`;
       useServerStore.getState().setServerStatus({
@@ -131,16 +134,21 @@ class LocalHttpServer {
       return url;
     }
 
-    throw new Error('LanTransferModule not available. Only Android is supported.');
+    throw new Error('LanTransferModule not available. Only Android/iOS is supported.');
   }
 
   /**
    * 注册原生模块事件监听器
    */
   private registerNativeEventListeners() {
+    // 移除旧的监听器 (防止重复注册)
+    eventEmitter.removeAllListeners('onUploadStart');
+    eventEmitter.removeAllListeners('onUploadProgress');
+    eventEmitter.removeAllListeners('onUploadComplete');
+    eventEmitter.removeAllListeners('onUploadError');
+
     // 上传开始
-    DeviceEventEmitter.removeAllListeners('onUploadStart');
-    DeviceEventEmitter.addListener('onUploadStart', (e) => {
+    eventEmitter.addListener('onUploadStart', (e) => {
       console.log('[Native] Upload Start:', e);
       useServerStore.getState().setUploadProgress({
         isUploading: true,
@@ -153,8 +161,7 @@ class LocalHttpServer {
     });
 
     // 上传进度
-    DeviceEventEmitter.removeAllListeners('onUploadProgress');
-    DeviceEventEmitter.addListener('onUploadProgress', (e) => {
+    eventEmitter.addListener('onUploadProgress', (e) => {
       const progress = e.totalSize > 0 ? Math.floor((e.receivedSize / e.totalSize) * 100) : 0;
       useServerStore.getState().setUploadProgress({
         isUploading: true,
@@ -167,8 +174,7 @@ class LocalHttpServer {
     });
 
     // 上传完成
-    DeviceEventEmitter.removeAllListeners('onUploadComplete');
-    DeviceEventEmitter.addListener('onUploadComplete', async (e) => {
+    eventEmitter.addListener('onUploadComplete', async (e) => {
       console.log('[Native] Upload Complete:', e.filePath);
 
       useServerStore.getState().setUploadProgress({
@@ -190,8 +196,7 @@ class LocalHttpServer {
     });
 
     // 上传错误
-    DeviceEventEmitter.removeAllListeners('onUploadError');
-    DeviceEventEmitter.addListener('onUploadError', (e) => {
+    eventEmitter.addListener('onUploadError', (e) => {
       console.error('[Native] Upload Error:', e.message);
       useServerStore.getState().setUploadProgress({
         isUploading: false,

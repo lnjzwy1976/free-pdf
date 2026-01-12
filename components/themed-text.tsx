@@ -5,7 +5,8 @@ import { useThemeColor } from '@/hooks/use-theme-color';
 export type ThemedTextProps = TextProps & {
   lightColor?: string;
   darkColor?: string;
-  type?: 'default' | 'title' | 'defaultSemiBold' | 'subtitle' | 'link';
+  type?: 'default' | 'defaultSemiBold' | 'title' | 'subtitle' | 'caption' | 'callout' | 'largeTitle';
+  centered?: boolean;
 };
 
 export function ThemedText({
@@ -13,19 +14,43 @@ export function ThemedText({
   lightColor,
   darkColor,
   type = 'default',
+  centered = false,
   ...rest
 }: ThemedTextProps) {
   const color = useThemeColor({ light: lightColor, dark: darkColor }, 'text');
+  const secondaryColor = useThemeColor({ light: lightColor, dark: darkColor }, 'textSecondary');
+
+  let textStyle = {};
+  switch (type) {
+    case 'largeTitle':
+      textStyle = styles.largeTitle;
+      break;
+    case 'title':
+      textStyle = styles.title;
+      break;
+    case 'subtitle':
+      textStyle = styles.subtitle;
+      break;
+    case 'defaultSemiBold':
+      textStyle = styles.defaultSemiBold;
+      break;
+    case 'caption':
+      textStyle = [styles.caption, { color: secondaryColor }];
+      break;
+    case 'callout':
+      textStyle = styles.callout;
+      break;
+    default:
+      textStyle = styles.default;
+      break;
+  }
 
   return (
     <Text
       style={[
         { color },
-        type === 'default' ? styles.default : undefined,
-        type === 'title' ? styles.title : undefined,
-        type === 'defaultSemiBold' ? styles.defaultSemiBold : undefined,
-        type === 'subtitle' ? styles.subtitle : undefined,
-        type === 'link' ? styles.link : undefined,
+        textStyle,
+        centered && styles.centered,
         style,
       ]}
       {...rest}
@@ -34,27 +59,46 @@ export function ThemedText({
 }
 
 const styles = StyleSheet.create({
-  default: {
-    fontSize: 16,
-    lineHeight: 24,
-  },
-  defaultSemiBold: {
-    fontSize: 16,
-    lineHeight: 24,
-    fontWeight: '600',
+  largeTitle: {
+    fontSize: 34,
+    fontWeight: '700',
+    lineHeight: 41,
+    letterSpacing: 0.37,
   },
   title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    lineHeight: 32,
+    fontSize: 22,
+    fontWeight: '700',
+    lineHeight: 28,
+    letterSpacing: 0.35,
   },
   subtitle: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: '600',
+    lineHeight: 25,
+    letterSpacing: 0.38,
   },
-  link: {
-    lineHeight: 30,
+  default: {
+    fontSize: 17,
+    lineHeight: 22,
+    letterSpacing: -0.41,
+  },
+  defaultSemiBold: {
+    fontSize: 17,
+    lineHeight: 22,
+    fontWeight: '600',
+    letterSpacing: -0.41,
+  },
+  callout: {
     fontSize: 16,
-    color: '#0a7ea4',
+    lineHeight: 21,
+    letterSpacing: -0.32,
+  },
+  caption: {
+    fontSize: 13,
+    lineHeight: 18,
+    letterSpacing: -0.08,
+  },
+  centered: {
+    textAlign: 'center',
   },
 });

@@ -12,7 +12,8 @@
       "supportsTablet": true,
       "infoPlist": {
         "NSLocalNetworkUsageDescription": "App 需要访问局域网以提供文件传输服务。"
-      }
+      },
+      "bundleIdentifier": "com.lnjzwy.freepdf"
     },
     "android": {
       "adaptiveIcon": {

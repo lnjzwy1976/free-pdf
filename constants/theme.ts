@@ -1,53 +1,92 @@
-/**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
- */
-
 import { Platform } from 'react-native';
 
-const tintColorLight = '#0a7ea4';
-const tintColorDark = '#fff';
+const tintColorLight = '#007AFF';
+const tintColorDark = '#0A84FF';
 
 export const Colors = {
   light: {
-    text: '#11181C',
-    background: '#fff',
+    text: '#1C1C1E',        // 近似纯黑，更柔和
+    textSecondary: '#3C3C4399', // iOS 标准次要文本 (60% opacity)
+    textTertiary: '#3C3C434D',  // 30% opacity
+    textInverse: '#FFFFFF',
+    
+    background: '#F2F2F7',    // 系统级背景灰
+    backgroundSecondary: '#FFFFFF', // 次级背景（通常用于页面）
+    
+    surface: '#FFFFFF',       // 卡片背景
+    surfaceHighlight: '#E5E5EA',
+    surfaceVariant: '#F2F2F7', // 稍微深一点的表面
+    
     tint: tintColorLight,
-    icon: '#687076',
-    tabIconDefault: '#687076',
+    tintBackground: '#007AFF1A', // 10% 透明度的主题色背景
+    
+    border: '#C6C6C8',
+    borderSoft: '#E5E5EA',    // 分割线
+    
+    icon: '#8E8E93',
+    iconActive: tintColorLight,
+    
+    error: '#FF3B30',
+    success: '#34C759',
+    warning: '#FFCC00',
+    
+    tabIconDefault: '#999999',
     tabIconSelected: tintColorLight,
   },
   dark: {
-    text: '#ECEDEE',
-    background: '#151718',
+    text: '#FFFFFF',
+    textSecondary: '#EBEBF599', // 60% white
+    textTertiary: '#EBEBF54D',  // 30% white
+    textInverse: '#000000',
+
+    background: '#000000',
+    backgroundSecondary: '#1C1C1E',
+
+    surface: '#1C1C1E',
+    surfaceHighlight: '#2C2C2E',
+    surfaceVariant: '#2C2C2E',
+
     tint: tintColorDark,
-    icon: '#9BA1A6',
-    tabIconDefault: '#9BA1A6',
+    tintBackground: '#0A84FF26', // 15% opacity
+
+    border: '#38383A',
+    borderSoft: '#545458A6', // 65% opacity
+
+    icon: '#8E8E93',
+    iconActive: tintColorDark,
+
+    error: '#FF453A',
+    success: '#32D74B',
+    warning: '#FFD60A',
+
+    tabIconDefault: '#8E8E93',
     tabIconSelected: tintColorDark,
   },
 };
 
 export const Fonts = Platform.select({
   ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
-    sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
-    serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
-    rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
-    mono: 'ui-monospace',
+    sans: 'System',
+    serif: 'Times New Roman',
+    rounded: 'System', 
+    mono: 'Menlo',
+  },
+  android: {
+    sans: 'Roboto',
+    serif: 'serif',
+    rounded: 'sans-serif-medium',
+    mono: 'monospace',
   },
   default: {
-    sans: 'normal',
+    sans: 'system-ui',
     serif: 'serif',
-    rounded: 'normal',
+    rounded: 'sans-serif',
     mono: 'monospace',
   },
   web: {
-    sans: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+    sans: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
     serif: "Georgia, 'Times New Roman', serif",
-    rounded: "'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif",
+    rounded: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
     mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
   },
 });

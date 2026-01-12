@@ -1,3 +1,8 @@
+import { Buffer } from 'buffer';
+
+// Polyfill Buffer for react-native-svg and other libraries
+global.Buffer = global.Buffer || Buffer;
+
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';

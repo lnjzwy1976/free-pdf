@@ -5,35 +5,48 @@ import { SymbolWeight, SymbolViewProps } from 'expo-symbols';
 import { ComponentProps } from 'react';
 import { OpaqueColorValue, type StyleProp, type TextStyle } from 'react-native';
 
-type IconMapping = Record<SymbolViewProps['name'], ComponentProps<typeof MaterialIcons>['name']>;
-type IconSymbolName = keyof typeof MAPPING;
+// Add 'partial' to allow for missing keys if needed, but here we want strong typing
+type MaterialIconName = ComponentProps<typeof MaterialIcons>['name'];
 
 /**
  * Add your SF Symbols to Material Icons mappings here.
- * - see Material Icons in the [Icons Directory](https://icons.expo.fyi).
- * - see SF Symbols in the [SF Symbols](https://developer.apple.com/sf-symbols/) app.
  */
-const MAPPING = {
+const MAPPING: Record<string, MaterialIconName> = {
+  // Navigation
   'house.fill': 'home',
-  'paperplane.fill': 'send',
-  'chevron.left.forwardslash.chevron.right': 'code',
-  'chevron.right': 'chevron-right',
   'arrow.down.doc.fill': 'file-download',
   'gear': 'settings',
-  'folder.fill': 'folder',
-  'wifi': 'wifi',
-  'link': 'link',
+  
+  // Actions & UI
+  'chevron.right': 'chevron-right',
   'chevron.left': 'chevron-left',
-  'bookmark.fill': 'bookmark',
+  'arrow.left': 'arrow-back',
   'plus': 'add',
   'trash': 'delete',
-  'arrow.left': 'arrow-back',
-} as IconMapping;
+  'link': 'link',
+  'wifi': 'wifi',
+  
+  // Files
+  'folder.fill': 'folder',
+  'doc.text.fill': 'description',
+  'cloud.download.fill': 'cloud-download',
+  
+  // Settings & Status
+  'sun.max.fill': 'brightness-6',
+  'info.circle.fill': 'info',
+  'hammer.fill': 'build', // or 'construction'
+  
+  // Reader
+  'bookmark.fill': 'bookmark',
+  'bookmark': 'bookmark-border',
+  'paperplane.fill': 'send',
+  'chevron.left.forwardslash.chevron.right': 'code',
+};
+
+export type IconSymbolName = keyof typeof MAPPING;
 
 /**
  * An icon component that uses native SF Symbols on iOS, and Material Icons on Android and web.
- * This ensures a consistent look across platforms, and optimal resource usage.
- * Icon `name`s are based on SF Symbols and require manual mapping to Material Icons.
  */
 export function IconSymbol({
   name,

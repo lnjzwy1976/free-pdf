@@ -1,9 +1,10 @@
 import * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { Alert, ScrollView, StyleSheet } from 'react-native';
+import { Alert, ScrollView, StyleSheet, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 
-import { ScreenContainer } from '@/components/common/ScreenContainer';
 import { DownloadModal } from '@/components/import/DownloadModal';
 import { ImportOptionCard } from '@/components/import/ImportOptionCard';
 import { ServerModal } from '@/components/import/ServerModal';
@@ -11,12 +12,14 @@ import { ThemedText } from '@/components/themed-text';
 import { FileManager } from '@/services/file-system/file-manager';
 import { useFileStore } from '@/store/use-file-store';
 import { scale, verticalScale } from '@/utils/responsive';
+import { useThemeColor } from '@/hooks/use-theme-color';
 
 export default function ImportScreen() {
   const router = useRouter();
   const { refreshFiles } = useFileStore();
   const [downloadModalVisible, setDownloadModalVisible] = useState(false);
   const [serverModalVisible, setServerModalVisible] = useState(false);
+  const backgroundColor = useThemeColor({}, 'background');
 
   const handleLocalImport = useCallback(async () => {
     try {
@@ -26,7 +29,6 @@ export default function ImportScreen() {
       });
 
       if (result.canceled) return;
-
       const file = result.assets[0];
       if (!file) return;
 
@@ -34,93 +36,109 @@ export default function ImportScreen() {
 
       if (savedUri) {
         Alert.alert('导入成功', `文件 ${file.name} 已保存到书架`, [
+          { text: '继续导入', onPress: () => refreshFiles() },
           { 
             text: '去查看', 
+            style: 'default',
             onPress: async () => {
               await refreshFiles(); 
               router.push('/(tabs)');
             }
           },
-          { text: '继续导入', onPress: () => refreshFiles() } 
         ]);
       } else {
         Alert.alert('导入失败', '无法保存文件');
       }
-
     } catch (error) {
       console.error(error);
       Alert.alert('错误', '选择文件时发生错误');
     }
   }, [refreshFiles, router]);
 
-  const handleNetworkDownload = () => {
-    setDownloadModalVisible(true);
-  };
-
-  const handleWifiTransfer = () => {
-    setServerModalVisible(true);
-  };
-
   return (
-    <ScreenContainer>
+    <SafeAreaView style={[styles.container, { backgroundColor }]} edges={['top']}>
+      <StatusBar style="auto" />
       <ScrollView contentContainerStyle={styles.content}>
-        <ThemedText type="title" style={styles.headerTitle}>导入 PDF</ThemedText>
-        <ThemedText style={styles.headerSubtitle}>选择一种方式将 PDF 添加到书架</ThemedText>
+        <View style={styles.header}>
+          <ThemedText type="largeTitle">导入文件</ThemedText>
+          <ThemedText style={styles.subtitle}>
+            支持多种方式将 PDF 导入到应用中
+          </ThemedText>
+        </View>
 
+        {/* 主要入口：本地文件 */}
         <ImportOptionCard
           title="本地文件导入"
-          description="从手机存储、iCloud 或 Google Drive 选择 PDF"
+          description="浏览 iCloud Drive、Google Drive 或本地存储"
           icon="folder.fill"
           onPress={handleLocalImport}
+          variant="primary"
+          colorTheme="blue"
         />
 
-        <ImportOptionCard
-          title="网络链接下载"
-          description="输入 URL 直接下载 PDF 文件"
-          icon="link"
-          onPress={handleNetworkDownload}
-        />
+        <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>其他方式</ThemedText>
 
-        <ImportOptionCard
-          title="局域网无线传输"
-          description="在电脑浏览器上传文件到手机"
-          icon="wifi"
-          onPress={handleWifiTransfer}
-        />
+        {/* 网格布局：网络下载 & 局域网 */}
+        <View style={styles.gridRow}>
+          <ImportOptionCard
+            title="网络下载"
+            description="输入 URL 下载"
+            icon="cloud.download.fill"
+            onPress={() => setDownloadModalVisible(true)}
+            variant="grid"
+            colorTheme="orange"
+          />
+          
+          <ImportOptionCard
+            title="无线传输"
+            description="局域网 WiFi 传书"
+            icon="wifi"
+            onPress={() => setServerModalVisible(true)}
+            variant="grid"
+            colorTheme="green"
+          />
+        </View>
       </ScrollView>
 
       <DownloadModal 
         visible={downloadModalVisible}
         onClose={() => setDownloadModalVisible(false)}
-        onSuccess={() => {
-          refreshFiles();
-        }}
+        onSuccess={() => refreshFiles()}
       />
 
       <ServerModal
         visible={serverModalVisible}
-        onClose={() => {
-            setServerModalVisible(false);
-            // refreshFiles(); // 刷新操作移到 ServerModal 内部的 stopServer 函数调用之后
-        }}
-        refreshFiles={refreshFiles} // 传递 refreshFiles 回调
+        onClose={() => setServerModalVisible(false)}
+        refreshFiles={refreshFiles}
       />
-    </ScreenContainer>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
   content: {
+    paddingHorizontal: scale(20),
     paddingBottom: verticalScale(40),
   },
-  headerTitle: {
+  header: {
     marginTop: verticalScale(20),
-    marginHorizontal: scale(16),
-  },
-  headerSubtitle: {
-    marginHorizontal: scale(16),
-    marginTop: verticalScale(8),
     marginBottom: verticalScale(24),
-    color: 'gray',
+  },
+  subtitle: {
+    marginTop: verticalScale(8),
+    color: '#8E8E93',
+  },
+  sectionTitle: {
+    marginTop: verticalScale(24),
+    marginBottom: verticalScale(16),
+    marginLeft: scale(4),
+  },
+  gridRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginHorizontal: -scale(6), // Offset grid padding
   },
 });
